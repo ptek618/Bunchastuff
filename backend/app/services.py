@@ -189,6 +189,8 @@ class AIPhotoAnalyzer:
             return ItemAnalysis(**analysis_data)
         except Exception as e:
             print(f"AI analysis failed: {e}")
+            print(f"OpenAI API key configured: {'Yes' if api_key else 'No'}")
+            print(f"OpenAI integration enabled: {openai_settings.get('enabled', False) if openai_settings else False}")
             return self._mock_analysis()
 
     def _image_to_base64(self, image: Image.Image) -> str:
