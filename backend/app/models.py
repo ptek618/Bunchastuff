@@ -106,3 +106,29 @@ class ListingCreateResponse(BaseModel):
     item_id: str
     listings: List[ListingData]
     message: str
+
+class PlatformSettings(BaseModel):
+    shopify: Dict[str, Any] = {
+        "apiKey": "",
+        "apiSecret": "",
+        "shopUrl": "",
+        "enabled": False
+    }
+    facebook: Dict[str, Any] = {
+        "appId": "",
+        "appSecret": "",
+        "accessToken": "",
+        "enabled": False
+    }
+    ebay: Dict[str, Any] = {
+        "clientId": "",
+        "clientSecret": "",
+        "devId": "",
+        "enabled": False
+    }
+
+class WebhookPayload(BaseModel):
+    platform: str
+    event_type: str
+    data: Dict[str, Any]
+    timestamp: datetime

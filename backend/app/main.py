@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 import uuid
@@ -7,10 +7,11 @@ import os
 
 from .models import (
     Item, ItemAnalysis, ListingCreateRequest, ListingCreateResponse,
-    PhotoUploadResponse, Platform, ShippingInfo, FacebookMessage, FacebookAutoRespondRequest, ShippingLabelRequest
+    PhotoUploadResponse, Platform, ShippingInfo, FacebookMessage, FacebookAutoRespondRequest, ShippingLabelRequest,
+    PlatformSettings, WebhookPayload
 )
 from .services import (
-    ai_analyzer, listing_generator, facebook_responder, shipping_manager, db
+    ai_analyzer, listing_generator, facebook_responder, shipping_manager, db, platform_service
 )
 
 app = FastAPI(title="Bunchastuff API", description="AI-powered bulk item listing platform")
@@ -171,3 +172,94 @@ async def update_shipping_status(item_id: str, status: str, tracking_number: Opt
 async def get_facebook_messages():
     """Get all Facebook messages and auto-responses"""
     return {"messages": db.facebook_messages}
+
+@app.post("/api/settings")
+async def save_platform_settings(settings: PlatformSettings):
+    try:
+        db.save_platform_settings(settings)
+        return {"message": "Settings saved successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/settings")
+async def get_platform_settings():
+    try:
+        settings = db.get_masked_platform_settings()
+        return settings
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/settings/test/{platform}")
+async def test_platform_connection(platform: str, settings: dict):
+    try:
+        if platform == "shopify":
+            success = platform_service.test_shopify_connection(settings)
+        elif platform == "facebook":
+            success = platform_service.test_facebook_connection(settings)
+        elif platform == "ebay":
+            success = platform_service.test_ebay_connection(settings)
+        else:
+            raise HTTPException(status_code=400, detail="Invalid platform")
+        
+        return {"success": success, "message": "Connection successful" if success else "Connection failed"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/webhooks/facebook")
+async def facebook_webhook(request: Request):
+    try:
+        payload = await request.json()
+        webhook_data = WebhookPayload(
+            platform="facebook",
+            event_type="message_received",
+            data=payload,
+            timestamp=datetime.now()
+        )
+        db.add_webhook_payload(webhook_data)
+        
+        if "message" in payload:
+            pass
+        elif "order" in payload:
+            pass
+        
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/webhooks/shopify")
+async def shopify_webhook(request: Request):
+    try:
+        payload = await request.json()
+        webhook_data = WebhookPayload(
+            platform="shopify",
+            event_type="order_created",
+            data=payload,
+            timestamp=datetime.now()
+        )
+        db.add_webhook_payload(webhook_data)
+        
+        if "id" in payload and "line_items" in payload:
+            pass
+        
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/webhooks/ebay")
+async def ebay_webhook(request: Request):
+    try:
+        payload = await request.json()
+        webhook_data = WebhookPayload(
+            platform="ebay",
+            event_type="item_sold",
+            data=payload,
+            timestamp=datetime.now()
+        )
+        db.add_webhook_payload(webhook_data)
+        
+        if "itemId" in payload:
+            pass
+        
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -6,6 +6,7 @@ import ItemsPage from '@/pages/ItemsPage'
 import ItemDetailPage from '@/pages/ItemDetailPage'
 import ShippingPage from '@/pages/ShippingPage'
 import MessagesPage from '@/pages/MessagesPage'
+import SettingsPage from '@/pages/SettingsPage'
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
             <Route path="/items/:id" element={<ItemDetailPage />} />
             <Route path="/shipping" element={<ShippingPage />} />
             <Route path="/messages" element={<MessagesPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </main>
         <Toaster />

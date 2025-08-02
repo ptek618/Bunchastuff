@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Camera, Package, MessageCircle, Truck, Home } from 'lucide-react'
+import { Camera, Package, MessageCircle, Truck, Home, Settings } from 'lucide-react'
 
 export default function Navbar() {
   const location = useLocation()
@@ -9,6 +9,7 @@ export default function Navbar() {
     { path: '/items', icon: Package, label: 'Items' },
     { path: '/shipping', icon: Truck, label: 'Shipping' },
     { path: '/messages', icon: MessageCircle, label: 'Messages' },
+    { path: '/settings', icon: Settings, label: 'Settings' },
   ]
 
   return (
