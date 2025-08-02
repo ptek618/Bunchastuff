@@ -198,6 +198,8 @@ async def test_platform_connection(platform: str, settings: dict):
             success = platform_service.test_facebook_connection(settings)
         elif platform == "ebay":
             success = platform_service.test_ebay_connection(settings)
+        elif platform == "openai":
+            success = platform_service.test_openai_connection(settings)
         else:
             raise HTTPException(status_code=400, detail="Invalid platform")
         

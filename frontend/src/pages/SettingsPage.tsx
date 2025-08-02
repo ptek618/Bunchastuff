@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
-import { Settings, Facebook, ShoppingBag, Package } from 'lucide-react'
+import { Settings, Facebook, ShoppingBag, Package, Brain } from 'lucide-react'
 
 interface PlatformSettings {
   shopify: {
@@ -24,6 +24,10 @@ interface PlatformSettings {
     clientId: string
     clientSecret: string
     devId: string
+    enabled: boolean
+  }
+  openai: {
+    apiKey: string
     enabled: boolean
   }
 }
@@ -47,6 +51,10 @@ export default function SettingsPage() {
       clientId: '',
       clientSecret: '',
       devId: '',
+      enabled: false
+    },
+    openai: {
+      apiKey: '',
       enabled: false
     }
   })
@@ -132,6 +140,47 @@ export default function SettingsPage() {
       </p>
 
       <div className="space-y-8">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Brain className="h-5 w-5" />
+              <span>OpenAI Integration</span>
+            </CardTitle>
+            <CardDescription>
+              Configure OpenAI API for AI-powered photo analysis and product identification.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="openai-enabled"
+                checked={settings.openai.enabled}
+                onChange={(e) => updatePlatformSetting('openai', 'enabled', e.target.checked)}
+                className="rounded"
+              />
+              <Label htmlFor="openai-enabled">Enable OpenAI Integration</Label>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="openai-api-key">API Key</Label>
+              <Input
+                id="openai-api-key"
+                type="password"
+                value={settings.openai.apiKey}
+                onChange={(e) => updatePlatformSetting('openai', 'apiKey', e.target.value)}
+                placeholder="Enter your OpenAI API key (sk-...)"
+              />
+            </div>
+            <div className="flex space-x-2">
+              <Button onClick={() => handleTestConnection('openai')} variant="outline">
+                Test Connection
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Separator />
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">

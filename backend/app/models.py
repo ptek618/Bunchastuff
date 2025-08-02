@@ -126,6 +126,10 @@ class PlatformSettings(BaseModel):
         "devId": "",
         "enabled": False
     }
+    openai: Dict[str, Any] = {
+        "apiKey": "",
+        "enabled": False
+    }
 
 class WebhookPayload(BaseModel):
     platform: str

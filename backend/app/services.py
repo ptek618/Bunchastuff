@@ -54,7 +54,7 @@ class InMemoryDatabase:
     def save_platform_settings(self, settings: PlatformSettings) -> None:
         encrypted_settings = PlatformSettings()
         
-        for platform in ['shopify', 'facebook', 'ebay']:
+        for platform in ['shopify', 'facebook', 'ebay', 'openai']:
             platform_data = getattr(settings, platform)
             encrypted_platform_data = {}
             
@@ -74,7 +74,7 @@ class InMemoryDatabase:
         
         decrypted_settings = PlatformSettings()
         
-        for platform in ['shopify', 'facebook', 'ebay']:
+        for platform in ['shopify', 'facebook', 'ebay', 'openai']:
             platform_data = getattr(self.platform_settings, platform)
             decrypted_platform_data = {}
             
@@ -95,7 +95,7 @@ class InMemoryDatabase:
         
         masked_settings = PlatformSettings()
         
-        for platform in ['shopify', 'facebook', 'ebay']:
+        for platform in ['shopify', 'facebook', 'ebay', 'openai']:
             platform_data = getattr(settings, platform)
             masked_platform_data = {}
             
@@ -115,18 +115,23 @@ class InMemoryDatabase:
 db = InMemoryDatabase()
 
 class AIPhotoAnalyzer:
-    def __init__(self, api_key: Optional[str] = None):
-        self.client = OpenAI(api_key=api_key) if api_key else None
+    def __init__(self, db: InMemoryDatabase):
+        self.db = db
 
     async def analyze_photo(self, image_data: bytes) -> ItemAnalysis:
-        if not self.client:
+        settings = self.db.get_platform_settings()
+        openai_settings = settings.openai if settings else {}
+        api_key = openai_settings.get('apiKey', '') if openai_settings.get('enabled', False) else None
+        
+        if not api_key:
             return self._mock_analysis()
 
         try:
+            client = OpenAI(api_key=api_key)
             image = Image.open(io.BytesIO(image_data))
             image_base64 = self._image_to_base64(image)
 
-            response = self.client.chat.completions.create(
+            response = client.chat.completions.create(
                 model="gpt-4-vision-preview",
                 messages=[
                     {
@@ -134,21 +139,30 @@ class AIPhotoAnalyzer:
                         "content": [
                             {
                                 "type": "text",
-                                "text": """Analyze this item photo and extract the following information in JSON format:
+                                "text": """You are an expert product analyst for online marketplaces. Analyze this item photo and extract detailed information for creating accurate listings. Be specific and identify the exact product if possible.
+
+                                Return ONLY a valid JSON object with this exact structure:
                                 {
-                                    "title": "Brief descriptive title",
-                                    "description": "Detailed description for selling",
-                                    "category": "Product category",
+                                    "title": "Specific product name with brand and model",
+                                    "description": "Detailed description highlighting key features, condition, and selling points",
+                                    "category": "Specific product category",
                                     "estimated_price": 0.0,
                                     "condition": "new|like_new|good|fair|poor",
-                                    "brand": "Brand name if visible",
-                                    "model": "Model if identifiable",
+                                    "brand": "Brand name if visible or identifiable",
+                                    "model": "Model number/name if identifiable",
                                     "color": "Primary color",
-                                    "size": "Size if applicable",
+                                    "size": "Size/dimensions if applicable",
                                     "weight": 0.0,
-                                    "keywords": ["keyword1", "keyword2"]
+                                    "keywords": ["specific", "searchable", "keywords"]
                                 }
-                                Focus on details that would help sell this item online."""
+
+                                For pricing: Research typical market values for this specific item in the observed condition. Consider:
+                                - Brand reputation and retail price
+                                - Current condition and wear
+                                - Market demand and availability
+                                - Comparable listings on eBay, Facebook Marketplace, etc.
+
+                                Be accurate and specific - avoid generic descriptions. If you can identify the exact product, include model numbers, specifications, and relevant details that buyers search for."""
                             },
                             {
                                 "type": "image_url",
@@ -159,10 +173,17 @@ class AIPhotoAnalyzer:
                         ]
                     }
                 ],
-                max_tokens=500
+                max_tokens=800
             )
 
             analysis_text = response.choices[0].message.content
+            analysis_text = analysis_text.strip()
+            if analysis_text.startswith('```json'):
+                analysis_text = analysis_text[7:]
+            if analysis_text.endswith('```'):
+                analysis_text = analysis_text[:-3]
+            analysis_text = analysis_text.strip()
+            
             analysis_data = json.loads(analysis_text)
             
             return ItemAnalysis(**analysis_data)
@@ -451,7 +472,7 @@ class ShippingManager:
                 shipping.shipped_at = datetime.now()
             db.save_shipping_info(shipping)
 
-ai_analyzer = AIPhotoAnalyzer()
+ai_analyzer = AIPhotoAnalyzer(db)
 listing_generator = ListingGenerator(db)
 facebook_responder = FacebookAutoResponder(db)
 shipping_manager = ShippingManager()
@@ -504,6 +525,24 @@ class PlatformIntegrationService:
                 return False
             
             return len(client_id) > 10 and len(client_secret) > 10
+            
+        except Exception as e:
+            return False
+    
+    def test_openai_connection(self, settings: Dict[str, Any]) -> bool:
+        try:
+            api_key = settings.get('apiKey', '')
+            
+            if not api_key:
+                return False
+            
+            client = OpenAI(api_key=api_key)
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": "Test"}],
+                max_tokens=5
+            )
+            return True
             
         except Exception as e:
             return False
