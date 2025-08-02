@@ -27,7 +27,7 @@ interface ShippingInfo {
 }
 
 export default function ShippingPage() {
-  const [shippingItems, setShippingItems] = useState<ShippingInfo[]>([])
+  const [shippingItems] = useState<ShippingInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [creatingLabel, setCreatingLabel] = useState(false)
   const { toast } = useToast()
